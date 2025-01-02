@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #222;
+            color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        #startScreen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            font-size: 1.2rem;
+            z-index: 10;
+        }
+        #settings {
+            margin: 10px 0;
+        }
+        #settings label {
+            margin-right: 10px;
+        }
+        #scoreBoard {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+        }
+        canvas {
+            border: 2px solid #fff;
+            width: 90%;
+            height: auto;
+            max-width: 400px;
+            max-height: 400px;
+        }
+        #controls {
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .control-button {
+            background-color: #444;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 5px;
+            width: 100px;
+        }
+        .control-button:hover {
+            background-color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="startScreen">
+        <h1>Welcome to Snake Game</h1>
+        <div id="settings">
+            <label for="speed">Speed:</label>
+            <select id="speed">
+                <option value="100">Normal</option>
+                <option value="50">Fast</option>
+                <option value="200">Slow</option>
+            </select>
+        </div>
+        <button id="startButton" class="control-button">Start Game</button>
+        <button id="exitButton" class="control-button">Exit</button>
+    </div>
+
+    <div id="scoreBoard">Score: 0</div>
+    <canvas id="gameCanvas"></canvas>
+    <div id="controls">
+        <div>
+            <button id="pauseButton" class="control-button">⏸️ Pause</button>
+            <button id="playButton" class="control-button">▶️ Play</button>
+            <button id="exitGameButton" class="control-button">Exit Game</button>
+        </div>
+    </div>
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreBoard = document.getElementById('scoreBoard');
+    const pauseButton = document.getElementById('pauseButton');
+    const playButton = document.getElementById('playButton');
+    const startScreen = document.getElementById('startScreen');
+    const startButton = document.getElementById('startButton');
+    const exitButton = document.getElementById('exitButton');
+    const speedSelect = document.getElementById('speed');
+
+    // Adjust canvas size for mobile
+    canvas.width = Math.min(window.innerWidth * 0.9, 400);
+    canvas.height = canvas.width;
+
+    const boxSize = canvas.width / 20;
+    const rows = Math.floor(canvas.height / boxSize);
+    const cols = Math.floor(canvas.width / boxSize);
+
+    let snake = [{ x: 5, y: 5 }];
+    let food = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+    let direction = 'RIGHT';
+    let score = 0;
+    let isPaused = false;
+    let gameInterval;
+
+    function drawBox(x, y, color) {
+        ctx.fillStyle = color;
+        ctx.fillRect(x * boxSize, y * boxSize, boxSize, boxSize);
+        ctx.strokeStyle = '#222';
+        ctx.strokeRect(x * boxSize, y * boxSize, boxSize, boxSize);
+    }
+
+    function drawSnake() {
+        snake.forEach(part => drawBox(part.x, part.y, 'lime'));
+    }
+
+    function drawFood() {
+        drawBox(food.x, food.y, 'red');
+    }
+
+    function moveSnake() {
+        const head = { ...snake[0] };
+        if (direction === 'UP') head.y -= 1;
+        if (direction === 'DOWN') head.y += 1;
+        if (direction === 'LEFT') head.x -= 1;
+        if (direction === 'RIGHT') head.x += 1;
+
+        snake.unshift(head);
+
+        if (head.x === food.x && head.y === food.y) {
+            score++;
+            scoreBoard.textContent = `Score: ${score}`;
+            food = {
+                x: Math.floor(Math.random() * cols),
+                y: Math.floor(Math.random() * rows)
+            };
+        } else {
+            snake.pop();
+        }
+    }
+
+    function checkCollision() {
+        const head = snake[0];
+        if (head.x < 0 || head.y < 0 || head.x >= cols || head.y >= rows) return true;
+        for (let i = 1; i < snake.length; i++) {
+            if (head.x === snake[i].x && head.y === snake[i].y) return true;
+        }
+        return false;
+    }
+
+    function update() {
+        if (checkCollision()) {
+            alert(`Game Over! Your score: ${score}`);
+            resetGame();
+        }
+        moveSnake();
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawSnake();
+        drawFood();
+    }
+
+    function gameLoop() {
+        if (!isPaused) {
+            update();
+            draw();
+        }
+    }
+
+    function startGame() {
+        startScreen.style.display = 'none';
+        canvas.style.display = 'block';
+        scoreBoard.style.display = 'block';
+        const speed = parseInt(speedSelect.value);
+        clearInterval(gameInterval);
+        gameInterval = setInterval(gameLoop, speed);
+    }
+
+    function resetGame() {
+        clearInterval(gameInterval);
+        snake = [{ x: 5, y: 5 }];
+        direction = 'RIGHT';
+        score = 0;
+        scoreBoard.textContent = `Score: ${score}`;
+        food = { x: Math.floor(Math.random() * cols), y: Math.floor(Math.random() * rows) };
+        isPaused = false;
+        startScreen.style.display = 'flex';
+        canvas.style.display = 'none';
+        scoreBoard.style.display = 'none';
+    }
+
+    document.addEventListener('keydown', event => {
+        if (event.key === 'ArrowUp' && direction !== 'DOWN') direction = 'UP';
+        else if (event.key === 'ArrowDown' && direction !== 'UP') direction = 'DOWN';
+        else if (event.key === 'ArrowLeft' && direction !== 'RIGHT') direction = 'LEFT';
+        else if (event.key === 'ArrowRight' && direction !== 'LEFT') direction = 'RIGHT';
+    });
+
+    pauseButton.addEventListener('click', () => isPaused = true);
+    playButton.addEventListener('click', () => isPaused = false);
+    startButton.addEventListener('click', startGame);
+
+    // Touch functionality
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+
+    canvas.addEventListener('touchstart', function (event) {
+        touchStartX = event.touches[0].clientX;
+        touchStartY = event.touches[0].clientY;
+    });
+
+    canvas.addEventListener('touchend', function (event) {
+        touchEndX = event.changedTouches[0].clientX;
+        touchEndY = event.changedTouches[0].clientY;
+
+        handleSwipe();
+    });
+
+    function handleSwipe() {
+        const diffX = touchEndX - touchStartX;
+        const diffY = touchEndY - touchStartY;
+
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            // Horizontal swipe
+            if (diffX > 0 && direction !== 'LEFT') {
+                direction = 'RIGHT'; // Swipe right
+            } else if (diffX < 0 && direction !== 'RIGHT') {
+                direction = 'LEFT'; // Swipe left
+            }
+        } else {
+            // Vertical swipe
+            if (diffY > 0 && direction !== 'UP') {
+                direction = 'DOWN'; // Swipe down
+            } else if (diffY < 0 && direction !== 'DOWN') {
+                direction = 'UP'; // Swipe up
+            }
+        }
+    }
+</script>
+</body>
+</html>
